@@ -1,179 +1,110 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.18)
 
-# standards & flags
+
+project(CombatPathingRevolution VERSION 0.3.0.0 LANGUAGES CXX)
+set(PROJECT_PLUGIN_NAME "Combat Pathing Revolution NG")
+
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF)
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "")
 
 include(GNUInstallDirs)
+find_package(CommonLibSSE CONFIG REQUIRED)
 
-# info
-project(
-	CombatPathingRevolution
-	VERSION 0.30.0
-	LANGUAGES CXX
+
+
+
+# Do not delete the below begin and end statements.
+# They are used by the globber py script for replacement
+### BEGIN SOURCE FILES ###
+set(SOURCES
+	src/Advance_Hook.cpp
+	src/Backoff_Hook.cpp
+	src/Circling_Hook.cpp
+	src/Fallback_Hook.cpp
+	src/LoadGame.cpp
+	src/main.cpp
+	src/Settings.cpp
+	src/Util.cpp
+	src/PayloadInterpreter/Dtry_Utils.cpp
+	src/PayloadInterpreter/payloadManager.cpp
+	src/PayloadInterpreter/payloadHandlers/CPRHandler.cpp
+	src/RE/CombatBehaviorNodesMovement.cpp
 )
 
-# out-of-source builds only
-if(${PROJECT_SOURCE_DIR} STREQUAL ${PROJECT_BINARY_DIR})
-	message(FATAL_ERROR "In-source builds are not allowed.")
-endif()
+set(HEADERS
+	src/Advance_Hook.h
+	src/Backoff_Hook.h
+	src/Circling_Hook.h
+	src/Fallback_Hook.h
+	src/LoadGame.h
+	src/PCH.h
+	src/Settings.h
+	src/Util.h
+	src/PayloadInterpreter/Dtry_Utils.h
+	src/PayloadInterpreter/hooks.h
+	src/PayloadInterpreter/payloadManager.h
+	src/PayloadInterpreter/payloadHandlers/payloadHandler.h
+	src/RE/CombatBehaviorController.h
+	src/RE/CombatBehaviorNodesMovement.h
+	src/RE/CombatBehaviorTreeControl.h
+	src/RE/CombatBehaviorTreeNode.h
+)
+### END SOURCE FILES ###
 
-# in-place configuration
-configure_file(
-	${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.h.in
-	${CMAKE_CURRENT_BINARY_DIR}/include/Version.h
-	@ONLY
+add_commonlibsse_plugin(${PROJECT_NAME}
+    # The plugin's name, defaults to target.
+    NAME "${PROJECT_PLUGIN_NAME}"
+
+    # The plugin's author, empty by default.
+    AUTHOR "KAOS (a.k.a. xILARTH)"
+
+    # The support email address, empty by default.
+    EMAIL "kaos4d1@gmail.com"
+
+    # Indicates the plugin is compatible with all runtimes via address library. This is the default if no
+    # other compatibilility mode is specified. Can be used with USE_SIGNATURE_SCANNING but not
+    # COMPATIBLE_RUNTIMES.
+    USE_ADDRESS_LIBRARY
+
+    # Indicates the plugin is compatible with all runtimes via signature scanning.  Can be used with
+    # USE_ADDRESS_LIBRARY but not COMPATIBLE_RUNTIMES.
+    USE_SIGNATURE_SCANNING
+
+    # List of the sources to include in the target, as would be the parameters to add_library.
+    SOURCES ${SOURCES} ${HEADERS}
 )
 
-configure_file(
-	${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.rc.in
-	${CMAKE_CURRENT_BINARY_DIR}/version.rc
-	@ONLY
+target_compile_features(
+    ${PROJECT_NAME}
+    PUBLIC
+        cxx_std_23
 )
 
-# source files
-execute_process(COMMAND powershell -ExecutionPolicy Bypass -File "${CMAKE_CURRENT_SOURCE_DIR}/!Update.ps1" "SOURCEGEN" "${PROJECT_VERSION}" "${CMAKE_CURRENT_BINARY_DIR}")
-include(${CMAKE_CURRENT_BINARY_DIR}/sourcelist.cmake)
-source_group(
-	TREE 
-		${CMAKE_CURRENT_SOURCE_DIR}
-	FILES 
-		${SOURCES}
-)
-
-source_group(
-	TREE ${CMAKE_CURRENT_BINARY_DIR}
-	FILES ${CMAKE_CURRENT_BINARY_DIR}/include/Version.h
-)
-
-# dependency macros
-macro(find_dependency_path DEPENDENCY FILE)
-	# searches extern for dependencies and if not checks the environment variable
-	if(NOT ${DEPENDENCY} STREQUAL "")
-		# Check extern
-		message(
-			STATUS
-			"Searching for ${DEPENDENCY} using file ${FILE}"
-		)
-		find_path("${DEPENDENCY}Path"
-			${FILE}
-			PATHS "extern/${DEPENDENCY}")
-
-		if("${${DEPENDENCY}Path}" STREQUAL "${DEPENDENCY}Path-NOTFOUND")
-			# Check path
-			message(
-				STATUS
-				"Getting environment for ${DEPENDENCY}Path: $ENV{${DEPENDENCY}Path}"
-			)
-			set("${DEPENDENCY}Path" "$ENV{${DEPENDENCY}Path}")
-		endif()
-
-		message(
-			STATUS
-			"Found ${DEPENDENCY} in ${${DEPENDENCY}Path}; adding"
-		)
-		add_subdirectory("${${DEPENDENCY}Path}" ${DEPENDENCY})
-	endif()
-endmacro()
-
-# dependencies
-find_dependency_path(CommonLibSSE include/REL/Relocation.h)
-find_dependency_path(DKUtil include/DKUtil/Config.hpp)
-find_package(spdlog CONFIG REQUIRED)
-
-# cmake target
-# runtime
-add_library(
-	${PROJECT_NAME}
-	SHARED
-		${SOURCES}
-		${CMAKE_CURRENT_BINARY_DIR}/include/Version.h
-		${CMAKE_CURRENT_BINARY_DIR}/version.rc
-		.clang-format
-		vcpkg.json
-)
-
-# include dir
-target_include_directories(
-	${PROJECT_NAME}
-	PRIVATE
-		${CMAKE_CURRENT_BINARY_DIR}/include
-		${CMAKE_CURRENT_SOURCE_DIR}/include
-		${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-
-# linkage
-target_link_libraries(
-	${PROJECT_NAME} 
-	PRIVATE
-		CommonLibSSE::CommonLibSSE
-		DKUtil::DKUtil
-		spdlog::spdlog
-)
-
-# compiler def
-if (MSVC)
-	add_compile_definitions(_UNICODE)
-
-	target_compile_options(
-		${PROJECT_NAME}
-		PRIVATE
-			/MP
-			/await
-			/W0
-			/WX
-			/permissive-
-			/Zc:alignedNew
-			/Zc:auto
-			/Zc:__cplusplus
-			/Zc:externC
-			/Zc:externConstexpr
-			/Zc:forScope
-			/Zc:hiddenFriend
-			/Zc:implicitNoexcept
-			/Zc:lambda
-			/Zc:noexceptTypes
-			/Zc:preprocessor
-			/Zc:referenceBinding
-			/Zc:rvalueCast
-			/Zc:sizedDealloc
-			/Zc:strictStrings
-			/Zc:ternary
-			/Zc:threadSafeInit
-			/Zc:trigraphs
-			/Zc:wchar_t
-			/wd4200 # nonstandard extension used : zero-sized array in struct/union
-	)
-endif()
-
-# PCH
 target_precompile_headers(
-	${PROJECT_NAME}
-	PRIVATE
-		src/PCH.h
+    ${PROJECT_NAME}
+    PRIVATE
+        src/PCH.h
 )
 
-# post build event
+target_compile_definitions(
+    ${PROJECT_NAME}
+    PUBLIC
+        WINVER=0x0601	# windows 7, minimum supported version by skyrim special edition
+        _WIN32_WINNT=0x0601
+        "$<$<BOOL:${SKSE_SUPPORT_XBYAK}>:SKSE_SUPPORT_XBYAK=1>"
+        "$<$<BOOL:${ENABLE_SKYRIM_SE}>:ENABLE_SKYRIM_SE=1>"
+        "$<$<BOOL:${ENABLE_SKYRIM_AE}>:ENABLE_SKYRIM_AE=1>"
+        "$<$<BOOL:${ENABLE_SKYRIM_VR}>:ENABLE_SKYRIM_VR=0>"
+        "$<$<BOOL:${WAIT_FOR_DEBUGGER}>:WAIT_FOR_DEBUGGER=1>"
+)
+
 add_custom_command(
-	TARGET 
-		${PROJECT_NAME}
-	POST_BUILD
-		COMMAND 
-			powershell -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_CURRENT_SOURCE_DIR}/!Update.ps1" "COPY" "${PROJECT_VERSION}" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$(ConfigurationName)" "${PROJECT_NAME}" "${ANNIVERSARY_EDITION}"
-		COMMENT 
-			"Updating project :))"
+    TARGET ${PROJECT_NAME}
+    POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:${PROJECT_NAME}>" "$ENV{MO_SSE_INSTANCE}/mods/${PROJECT_PLUGIN_NAME}/SKSE/Plugins/"
 )
 
-# called via !Rebuild.ps1
-if(DEFINED GROUP)
-set_target_properties(
-	${PROJECT_NAME}
-	PROPERTIES
-	FOLDER
-	${GROUP}
-)
-endif()
+find_package(Python)
+install(CODE "execute_process(COMMAND \"${_Python_EXECUTABLE}\" \"${CMAKE_CURRENT_SOURCE_DIR}/scripts/mkrelease.py\" -v ${PROJECT_VERSION} -n \"${PROJECT_PLUGIN_NAME}\" -f \"$<TARGET_FILE:${PROJECT_NAME}>\" -o \"${PROJECT_NAME}\")")

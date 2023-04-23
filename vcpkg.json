@@ -1,21 +1,24 @@
 {
-    "name":  "combatpathingrevolution",
-    "version-string":  "0.30.0",
-    "description":  "",
-    "license":  "MIT",
-    "dependencies": [
-        "effolkronium-random",
-        "rsm-binary-io",
-        "simpleini",
-        "spdlog",
-        "nlohmann-json",
-        "rapidcsv",
-        "tomlplusplus",
-        "xbyak"
-      ],
-    "features":  {
-                     "mo2-install":  {
-                                         "description":  "Combat Pathing Revolution"
-                                     }
-                 }
+  "name": "combatpathingrevolution",
+  "version-string": "0.30.0",
+  "description": "",
+  "license": "MIT",
+  "dependencies": [
+    "boost-stl-interfaces",
+    "effolkronium-random",
+    "rsm-binary-io",
+    "simpleini",
+    "spdlog",
+    "nlohmann-json",
+    "rapidcsv",
+    "tomlplusplus",
+    "xbyak",
+    "commonlibsse-ng-flatrim"
+  ],
+  "features": {
+    "mo2-install": {
+      "description": "Combat Pathing Revolution"
+    }
+  },
+  "builtin-baseline": "b3e0a1e625a0cc00073efb763e39088e5b75939e"
 }
